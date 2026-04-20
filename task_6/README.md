@@ -12,13 +12,6 @@
 2. Сравнить планы выполнения до и после индексации.
 3. Зафиксировать результат в воспроизводимом виде (SQL + отчет).
 
-## Контекст БД
-
-Работа выполнялась на существующей модели из `task_1..task_5`:
-- `ops.marking_codes`
-- `ops.packages`
-- `audit.events`
-- связанные таблицы `core/ref/wh/ops/audit`
 
 ## Выполнено
 
@@ -43,32 +36,30 @@
 
 ## Результаты EXPLAIN (ANALYZE, BUFFERS)
 
-Контекст теста:
-- `client_id = 1` (`ООО Альфа Логистик`)
-- `marking_status_id = 2` (`IN_STOCK`)
-- `package_status_id = 1` (`OPEN`)
-- `document_id = 1`
+Тестовые данные:
+- client_id = 1 ("ООО Альфа Логистик")
+- marking_status_id = 2 ("IN_STOCK")
+- package_status_id = 1 ("OPEN")
+- document_id = 1`
 
 1. `ops.marking_codes`
-- До: `Bitmap Heap Scan + Sort`, `Execution Time: 1.204 ms`
-- После: `Index Scan`, `Execution Time: 0.186 ms`
-- Итог: ~`6.5x` быстрее
+- До: Bitmap Heap Scan + Sort, Execution Time: 1.204 ms
+- После: Index Scan, Execution Time: 0.186 ms
+- Итог: 6.5x быстрее
 
 2. `ops.packages`
-- До: `Bitmap Heap Scan + Sort`, `Execution Time: 0.321 ms`
-- После: `Index Scan`, `Execution Time: 0.127 ms`
-- Итог: ~`2.5x` быстрее
+- До: Bitmap Heap Scan + Sort, Execution Time: 0.321 ms
+- После: Index Scan, Execution Time: 0.127 ms
+- Итог: 2.5x быстрее
 
 3. `audit.events`
-- До: `Execution Time: 0.045 ms`
-- После: `Execution Time: 0.049 ms`
-- Итог: на текущем объеме строк по документу эффект нейтральный
+- До: Execution Time: 0.045 ms
+- После: Execution Time: 0.049 ms
+- Итог: на текущем объеме строк по документу эффект нет, мало данных. 
 
-## SQL Files
+## SQL
 
-1. `solution.sql` - замеры до/после и создание индексов.
-2. `../scripts/seed_3plwms_realistic.sql` - общий реалистичный seed для всех ДЗ.
+`solution.sql` - замеры до/после и создание индексов.
 
-## Вывод
 
-Основной прирост получен на рабочих запросах к `ops.marking_codes` и `ops.packages`, где используются фильтры по клиенту/статусу и сортировка по времени. Структура и SQL полностью совместимы с общей схемой проекта.
+
