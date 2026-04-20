@@ -1,6 +1,6 @@
 -- task_6 / indexes_postgresql
 -- solution.sql
--- Запускать на существующей 3PL WMS модели
+
 
 -- Параметры примера для текущего seed:
 -- client_id = 1, marking status = 2 (IN_STOCK), package status = 1 (OPEN), document_id = 1
