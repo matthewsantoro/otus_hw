@@ -34,8 +34,8 @@ CREATE INDEX idx_t6_packages_history_active_parent_added
   ON ops.packages_history (client_id, parent_package_id, added_at DESC)
   WHERE removed_at IS NULL;
 ```
-Комментарий: ускоряет запросы по активным вложениям упаковки (removed_at IS NULL).
-
+Комментарий: ускоряет запросы по активным вложениям упаковки (removed_at IS NULL). 
+                                                                
 ## Результаты EXPLAIN
 
 Тестовый контекст:
