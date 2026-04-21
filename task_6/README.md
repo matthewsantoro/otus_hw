@@ -1,65 +1,65 @@
 # Индексы PostgreSQL (Task 6)
 
-> Разработка проекта 3PL WMS
+## Задание (как в OTUS)
 
-## Задание
-
-Оптимизировать запросы в PostgreSQL с помощью индексов и подтвердить эффект через `EXPLAIN (ANALYZE, BUFFERS)`.
-
-## Цель
-
-1. Применить индексы на реальной БД проекта, а не на отдельном учебном примере.
-2. Сравнить планы выполнения до и после индексации.
-3. Зафиксировать результат в воспроизводимом виде (SQL + отчет).
-
-
-## Выполнено
-
-1. Подготовлен датасет в реальной схеме проекта.
-2. Сняты базовые замеры по целевым запросам.
-3. Добавлены индексы:
-   - `idx_mc_client_status_created_at`
-   - `idx_packages_client_status_created_at`
-   - `idx_events_document_created_at`
-4. Повторно сняты замеры и сравнены планы.
-
-## Индексы и комментарии
-
-1. `ops.idx_mc_client_status_created_at (client_id, status_id, created_at DESC)`
-Назначение: быстрый отбор кодов маркировки по клиенту/статусу с сортировкой по дате.
-
-2. `ops.idx_packages_client_status_created_at (client_id, status_id, created_at DESC) INCLUDE (cell_id, fullcode)`
-Назначение: ускорение выборки упаковок по клиенту/статусу и выдача последних записей.
-
-3. `audit.idx_events_document_created_at (document_id, created_at DESC)`
-Назначение: ускорение ленты событий по документу.
-
-## Результаты EXPLAIN (ANALYZE, BUFFERS)
-
-Тестовые данные:
-- client_id = 1 ("ООО Альфа Логистик")
-- marking_status_id = 2 ("IN_STOCK")
-- package_status_id = 1 ("OPEN")
-- document_id = 1`
-
-1. `ops.marking_codes`
-- До: Bitmap Heap Scan + Sort, Execution Time: 1.204 ms
-- После: Index Scan, Execution Time: 0.186 ms
-- Итог: 6.5x быстрее
-
-2. `ops.packages`
-- До: Bitmap Heap Scan + Sort, Execution Time: 0.321 ms
-- После: Index Scan, Execution Time: 0.127 ms
-- Итог: 2.5x быстрее
-
-3. `audit.events`
-- До: Execution Time: 0.045 ms
-- После: Execution Time: 0.049 ms
-- Итог: на текущем объеме строк по документу эффект нет, мало данных. 
-
-## SQL
-
-`solution.sql` - замеры до/после и создание индексов.
+1. Создать индекс к таблице БД и показать EXPLAIN, где он используется.
+2. Реализовать индекс для полнотекстового поиска.
+3. Реализовать индекс на часть таблицы или индекс на поле с функцией.
+4. Создать индекс на несколько полей.
+5. Дать краткие комментарии к каждому индексу.
+6. Описать, что делал и какие были проблемы.
 
 
 
+## Индексы
+
+1. `ops.idx_t6_mc_client_status_created_at`
+```sql
+CREATE INDEX idx_t6_mc_client_status_created_at
+  ON ops.marking_codes (client_id, status_id, created_at DESC);
+```
+Комментарий: Ускоряет выборку кодов маркировки по клиенту и статусу с сортировкой по дате.
+
+2. `core.idx_t6_products_fts_ru`
+```sql
+CREATE INDEX idx_t6_products_fts_ru
+  ON core.products
+  USING gin (to_tsvector('russian', coalesce(name, '') || ' ' || coalesce(sku, '')));
+```
+Комментарий: ускоряет полнотекстовый поиск по названию и SKU товара.
+
+3. `ops.idx_t6_packages_history_active_parent_added`
+```sql
+CREATE INDEX idx_t6_packages_history_active_parent_added
+  ON ops.packages_history (client_id, parent_package_id, added_at DESC)
+  WHERE removed_at IS NULL;
+```
+Комментарий: ускоряет запросы по активным вложениям упаковки (removed_at IS NULL).
+
+## Результаты EXPLAIN (текстом)
+
+Тестовый контекст:
+- client_id=1
+- status_id=2 (IN_STOCK)
+- parent_package_id=43
+
+1. Составной индекс (`idx_t6_mc_client_status_created_at`)
+- До: Bitmap Heap Scan + Sort, Execution Time: 1.190 ms
+- После: Index Scan using idx_t6_mc_client_status_created_at, Execution Time: 0.111 ms
+- Эффект: заметное ускорение выборки и сортировки.
+
+2. Full-text индекс (`idx_t6_products_fts_ru`)
+- До: Seq Scan on products, Execution Time: 2.785 ms
+- После: Bitmap Index Scan on idx_t6_products_fts_ru + Bitmap Heap Scan, Execution Time: 0.032 ms
+- Эффект: резкое ускорение полнотекстового поиска.
+
+3. Partial индекс (`idx_t6_packages_history_active_parent_added`)
+- До: Index Scan using idx_packages_history_parent_active + Sort, Execution Time: 0.034 ms
+- После: Index Scan using idx_t6_packages_history_active_parent_added, Execution Time: 0.028 ms
+- Эффект: план стал целевым под активные строки, время слегка улучшилось.
+
+
+## Файлы
+
+1. `solution.sql` - сценарий замеров и создания индексов.
+2. `../scripts/seed_3plwms_realistic.sql` - данные.
