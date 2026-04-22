@@ -1,86 +1,46 @@
-# Task 7 - Агрегация, CTE и LAG (PostgreSQL)
+# Task 7 - Посчитать кол-во очков по всем игрокам за текущий год и за предыдущий
 
-## Что требуется по заданию
+## Задание
 
-1. Создать таблицу `statistic`.
-2. Заполнить её данными из условия.
-3. Сделать агрегирующий запрос по годам с сортировкой.
-4. Повторить тот же результат через `CTE`.
-5. Вывести очки за текущий и предыдущий год для каждого игрока через `LAG`.
+1. Создать таблицу statistic.
+2. Заполнить её данными.
+3. Написать запрос суммы очков с группировкой и сортировкой по годам.
+4. Написать cte показывающее тоже самое.
+5. Используя функцию LAG вывести кол-во очков по всем игрокам за текущий код и за предыдущий.
 
-## Что реализовано
+## Результаты
 
-Все пункты выполнены в `solution.sql`:
+Все пункты выполнены в solution.sql:
 
 1. DDL + INSERT (таблица и данные).
 2. `GROUP BY year_game` + `ORDER BY year_game`.
 3. Эквивалентный запрос через `WITH yearly_totals AS (...)`.
 4. Оконная функция `LAG(points)` с `PARTITION BY player_name`.
 
-## Теория (структуры CTE и LAG)
-
-### Общая структура CTE
-
-```sql
-WITH cte_name AS (
-  SELECT ...
-)
-SELECT ...
-FROM cte_name;
-```
-
-### Общая структура LAG
-
-```sql
-LAG(expression [, offset [, default_value]])
-OVER (
-  [PARTITION BY column_list]
-  [ORDER BY sort_expression]
-)
-```
-
-### Как применено в этом ДЗ
-
-```sql
-WITH yearly_totals AS (
-  SELECT year_game, SUM(points) AS total_points
-  FROM public.statistic
-  GROUP BY year_game
-)
-SELECT year_game, total_points
-FROM yearly_totals
-ORDER BY year_game;
-```
-
-```sql
-SELECT
-  player_name,
-  year_game,
-  points AS current_year_points,
-  LAG(points) OVER (
-    PARTITION BY player_name
-    ORDER BY year_game
-  ) AS previous_year_points
-FROM public.statistic
-ORDER BY player_name, year_game;
-```
-
-`ORDER BY` внутри окна `LAG` обязателен для корректной логики "предыдущего года". Без него ошибка не возникнет, но результат будет недетерминированным.
-
 ## Ожидаемый итог агрегации по годам
 
-| year_game | total_points |
-|---|---:|
-| 2018 | 92.00 |
-| 2019 | 98.00 |
-| 2020 | 110.00 |
+ year_game | total_points 
+-----------+--------------
+      2018 |        92.00
+      2019 |        98.00
+      2020 |       110.00
+(3 rows)
 
-## Как запустить
 
-В psql:
-
-```sql
-\i results/otus_hw/task_7/solution.sql
-```
-
-Скрипт сначала пересоздает таблицу `public.statistic`, затем выполняет три итоговых SELECT.
+## C LAG с предыдущим годом 
+ player_name | year_game | current_year_points | previous_year_points 
+-------------+-----------+---------------------+----------------------
+ Jack        |      2018 |               14.00 |                     
+ Jack        |      2019 |               15.00 |                14.00
+ Jack        |      2020 |               18.00 |                15.00
+ Jackie      |      2018 |               30.00 |                     
+ Jackie      |      2019 |               28.00 |                30.00
+ Jackie      |      2020 |               29.00 |                28.00
+ Jet         |      2018 |               30.00 |                     
+ Jet         |      2019 |               25.00 |                30.00
+ Jet         |      2020 |               27.00 |                25.00
+ Luke        |      2019 |               16.00 |                     
+ Luke        |      2020 |               19.00 |                16.00
+ Mike        |      2018 |               18.00 |                     
+ Mike        |      2019 |               14.00 |                18.00
+ Mike        |      2020 |               17.00 |                14.00

@@ -1,0 +1,60 @@
+services:
+  postgres-primary:
+    image: postgres:16
+    container_name: postgres-primary
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    command: ["postgres", "-c", "config_file=/etc/postgresql/postgresql.conf"]
+    volumes:
+      - primary_data:/var/lib/postgresql/data
+      - ./conf/primary/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      - ./conf/primary/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  postgres-physical-replica:
+    image: postgres:16
+    container_name: postgres-physical-replica
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+      PGPASSWORD: postgres
+    depends_on:
+      postgres-primary:
+        condition: service_healthy
+    entrypoint: ["/bin/bash", "/bootstrap/physical_replica_bootstrap.sh"]
+    volumes:
+      - physical_replica_data:/var/lib/postgresql/data
+      - ./scripts/physical_replica_bootstrap.sh:/bootstrap/physical_replica_bootstrap.sh:ro
+    ports:
+      - "5433:5432"
+
+  postgres-logical-subscriber:
+    image: postgres:16
+    container_name: postgres-logical-subscriber
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "5434:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  primary_data:
+  physical_replica_data:
