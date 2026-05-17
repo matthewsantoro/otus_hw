@@ -1,0 +1,48 @@
+services:
+  mysql-source:
+    image: mysql:8.0
+    container_name: mysql-source
+    hostname: mysql-source
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+    ports:
+      - "33061:3306"
+    command:
+      - --server-id=101
+      - --log-bin=mysql-bin
+      - --binlog-format=ROW
+      - --gtid-mode=ON
+      - --enforce-gtid-consistency=ON
+      - --log-replica-updates=ON
+      - --binlog-expire-logs-seconds=604800
+    volumes:
+      - source_data:/var/lib/mysql
+      - ./source-init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+
+  mysql-replica:
+    image: mysql:8.0
+    container_name: mysql-replica
+    hostname: mysql-replica
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+    ports:
+      - "33062:3306"
+    command:
+      - --server-id=102
+      - --log-bin=mysql-bin
+      - --binlog-format=ROW
+      - --gtid-mode=ON
+      - --enforce-gtid-consistency=ON
+      - --log-replica-updates=ON
+      - --read-only=ON
+      - --super-read-only=ON
+      - --replicate-ignore-db=mysql
+      - --replicate-ignore-db=sys
+      - --replicate-ignore-db=performance_schema
+      - --replicate-ignore-db=information_schema
+    volumes:
+      - replica_data:/var/lib/mysql
+
+volumes:
+  source_data:
+  replica_data:
